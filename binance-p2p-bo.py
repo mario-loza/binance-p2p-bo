@@ -1,11 +1,27 @@
 import datetime
 import requests
 import tkinter as tk
-from plyer import notification
+from winotify import Notification
+import os
+import sys
 
 CURRENCY = 'BOB'
 ASSET = 'USDT'
 TRADE_TYPE = 'SELL'
+
+def resource_path(relative_path):
+    if hasattr(sys, '_MEIPASS'):
+        return os.path.join(sys._MEIPASS, relative_path)
+    return os.path.join(os.path.abspath("."), relative_path)
+
+def show_notification(title, message):
+    icon_path = resource_path("profit.ico")
+    toast = Notification(app_id="binance-p2p-bo",
+        title=title,
+        msg=message,
+        duration="short",
+        icon=icon_path)
+    toast.show()
 
 def fetch_p2p_data():
     url = "https://p2p.binance.com/bapi/c2c/v2/friendly/c2c/adv/search"
@@ -62,25 +78,23 @@ def update_prices():
             threshold = float(entry.get())
             top_price = offers[0]['price']
             if top_price >= threshold:
-                notification.notify(
-                    title="¡Precio USDT alcanzado!",
-                    message=f"Precio actual: {top_price:.2f} BOB",
-                    timeout=10
-                )
+                show_notification( "¡Precio USDT alcanzado!",f"Precio actual: {top_price:.2f} BOB" )
         except ValueError:
-            pass  # Invalid input — ignore
+            pass  
 
     now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     root.title(f"Mejores Precios P2P - USDT to BOB (Binance - {now})")
     root.after(15000, update_prices)
 
 root = tk.Tk()
+icon_path = resource_path("profit.ico")
+root.iconbitmap(icon_path)
+
 root.title("Mejores Precios P2P - USDT to BOB (Binance)")
 
 root.rowconfigure(1, weight=1)
 root.columnconfigure(0, weight=1)
 
-# Threshold Entry + Checkbox
 top_frame = tk.Frame(root)
 top_frame.grid(row=0, column=0, sticky="ew", padx=10, pady=5)
 
@@ -93,7 +107,6 @@ notify_var = tk.BooleanVar(value=False)
 notify_checkbox = tk.Checkbutton(top_frame, text="Activar notificación", variable=notify_var)
 notify_checkbox.pack(side=tk.LEFT, padx=(10, 0))
 
-# Listbox + Scrollbar
 frame = tk.Frame(root)
 frame.grid(row=1, column=0, sticky="nsew", padx=10, pady=5)
 frame.rowconfigure(0, weight=1)
@@ -106,7 +119,6 @@ scrollbar = tk.Scrollbar(frame, orient=tk.VERTICAL, command=listbox.yview)
 scrollbar.grid(row=0, column=1, sticky="ns")
 listbox.config(yscrollcommand=scrollbar.set)
 
-# Set initial window size to fit listbox
 root.update_idletasks()
 root.geometry(f"{root.winfo_width()}x{root.winfo_height()}")
 
