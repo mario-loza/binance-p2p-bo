@@ -10,14 +10,22 @@ def fetch_p2p_data():
     url = "https://p2p.binance.com/bapi/c2c/v2/friendly/c2c/adv/search"
     headers = {'Content-Type': 'application/json'}
     payload = {
-        "asset": ASSET,
         "fiat": CURRENCY,
-        "merchantCheck": True,
         "page": 1,
         "rows": 20,
-        "payTypes": [],
         "tradeType": TRADE_TYPE,
-        "publisherType":"merchant"
+        "asset": ASSET,
+        "countries": [],
+        "proMerchantAds": False,
+        "shieldMerchantAds": False,
+        "filterType": "all",
+        "periods": [],
+        "additionalKycVerifyFilter": 0,
+        "publisherType":"merchant",
+        "payTypes": [],
+        "classifies": ["mass","profession", "fiat_trade"],
+        "tradedWith": False,
+        "followed": False
     }
 
     try:
@@ -26,10 +34,15 @@ def fetch_p2p_data():
         ads = data['data']
         offers = [{
             "price": float(ad['adv']['price']),
-            "name": ad['advertiser']['nickName']
+            "name": ad['advertiser']['nickName'],
+            "min": ad['adv']['minSingleTransAmount'],
+            "max": ad['adv']['maxSingleTransAmount']
         } for ad in ads]
         offers.sort(key=lambda x: x['price'], reverse=True)
-        return [f"{offer['price']} {CURRENCY} - {offer['name']}" for offer in offers]
+        return [
+            f"{offer['price']:>7} BOB - {offer['name']:<20} ( min: {offer['min']:>7}  max: {offer['max']:>7} )"
+            for offer in offers
+        ]
 
     except Exception as e:
         return [f"Error: {e}"]
@@ -49,7 +62,7 @@ root.title("Mejores Precios P2P - USDT to BOB (Binance)")
 frame = tk.Frame(root)
 frame.pack(padx=10, pady=10)
 
-listbox = tk.Listbox(frame, font=("Helvetica", 14), width=50, height=15)
+listbox = tk.Listbox(frame, font=("Courier New", 14), width=70, height=15)
 listbox.pack(side=tk.LEFT, fill=tk.BOTH)
 
 scrollbar = tk.Scrollbar(frame, orient=tk.VERTICAL)
