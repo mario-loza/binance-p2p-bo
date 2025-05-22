@@ -59,17 +59,21 @@ def update_prices():
 root = tk.Tk()
 root.title("Mejores Precios P2P - USDT to BOB (Binance)")
 
+root.rowconfigure(0, weight=1)
+root.columnconfigure(0, weight=1)
+
 frame = tk.Frame(root)
-frame.pack(padx=10, pady=10)
+frame.grid(row=0, column=0, sticky="nsew")
+frame.rowconfigure(0, weight=1)
+frame.columnconfigure(0, weight=1)
 
 listbox = tk.Listbox(frame, font=("Courier New", 14), width=70, height=15)
-listbox.pack(side=tk.LEFT, fill=tk.BOTH)
+listbox.grid(row=0, column=0, sticky="nsew")
 
-scrollbar = tk.Scrollbar(frame, orient=tk.VERTICAL)
-scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+scrollbar = tk.Scrollbar(frame, orient=tk.VERTICAL, command=listbox.yview)
+scrollbar.grid(row=0, column=1, sticky="ns")
 
 listbox.config(yscrollcommand=scrollbar.set)
-scrollbar.config(command=listbox.yview)
 
 update_prices()
 root.mainloop()
