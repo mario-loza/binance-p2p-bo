@@ -1,9 +1,15 @@
+#crea el exe asi: pyinstaller --onefile --noconsole binance-p2p-bo.py --icon=profit.ico --add-data "profit.ico;." 
+
 import datetime
 import requests
 import tkinter as tk
 from winotify import Notification
 import os
 import sys
+import winshell
+from win32com.client import Dispatch
+
+APP_NAME = "Binance P2P-BO"
 
 CURRENCY = 'BOB'
 ASSET = 'USDT'
@@ -14,9 +20,23 @@ def resource_path(relative_path):
         return os.path.join(sys._MEIPASS, relative_path)
     return os.path.join(os.path.abspath("."), relative_path)
 
+def create_shortcut_if_needed():
+    shortcut_path = os.path.join(winshell.start_menu(), f"{APP_NAME}.lnk")
+    if os.path.exists(shortcut_path):
+        return
+
+    exe_path = sys.executable if getattr(sys, 'frozen', False) else os.path.abspath(__file__)
+    shell = Dispatch('WScript.Shell')
+    shortcut = shell.CreateShortCut(shortcut_path)
+    shortcut.Targetpath = exe_path
+    shortcut.WorkingDirectory = os.path.dirname(exe_path)
+    shortcut.IconLocation = exe_path
+    shortcut.save()
+
 def show_notification(title, message):
     icon_path = resource_path("profit.ico")
-    toast = Notification(app_id="binance-p2p-bo",
+    toast = Notification(
+        app_id=APP_NAME,
         title=title,
         msg=message,
         duration="short",
@@ -85,6 +105,8 @@ def update_prices():
     now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     root.title(f"Mejores Precios P2P - USDT to BOB (Binance - {now})")
     root.after(15000, update_prices)
+
+create_shortcut_if_needed()
 
 root = tk.Tk()
 icon_path = resource_path("profit.ico")
