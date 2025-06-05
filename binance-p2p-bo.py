@@ -69,9 +69,13 @@ def fetch_p2p_data():
         response = requests.post(url, headers=headers, json=payload)
         data = response.json()
         ads = data['data']
+        
         offers = [{
             "price": float(ad['adv']['price']),
             "name": ad['advertiser']['nickName'],
+            "orders": ad['advertiser']['monthOrderCount'],
+            "completion": ad['advertiser']['monthFinishRate']*100,
+            "evaluation": ad['advertiser']['positiveRate']*100,
             "min": ad['adv']['minSingleTransAmount'],
             "max": ad['adv']['maxSingleTransAmount']
         } for ad in ads]
@@ -90,7 +94,7 @@ def update_prices():
         if "error" in offer:
             listbox.insert(tk.END, f"Error: {offer['error']}")
             continue
-        line = f"{offer['price']:>7} BOB - {offer['name']:<20} ( min: {offer['min']:>7}  max: {offer['max']:>7} )"
+        line = f"{offer['price']:>7} BOB - {offer['name']:<20} Orders:{offer['orders']:>7} Completion:{round(offer['completion'],1):>6}% Eval:{round(offer['evaluation'],1):>6}% ( min: {int(offer['min']):>7,}  max: {int(offer['max']):>7,} )"
         listbox.insert(tk.END, line)
 
     if notify_var.get():
@@ -134,7 +138,7 @@ frame.grid(row=1, column=0, sticky="nsew", padx=10, pady=5)
 frame.rowconfigure(0, weight=1)
 frame.columnconfigure(0, weight=1)
 
-listbox = tk.Listbox(frame, font=("Courier New", 14), width=70, height=15)
+listbox = tk.Listbox(frame, font=("Courier New", 14), width=115, height=15)
 listbox.grid(row=0, column=0, sticky="nsew")
 
 scrollbar = tk.Scrollbar(frame, orient=tk.VERTICAL, command=listbox.yview)
