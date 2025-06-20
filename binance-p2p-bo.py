@@ -3,6 +3,7 @@
 import datetime
 import requests
 import tkinter as tk
+from tkinter import ttk
 from winotify import Notification
 import os
 import sys
@@ -10,10 +11,8 @@ import winshell
 from win32com.client import Dispatch
 
 APP_NAME = "Binance P2P-BO"
-
 CURRENCY = 'BOB'
 ASSET = 'USDT'
-TRADE_TYPE = 'SELL'
 
 def resource_path(relative_path):
     if hasattr(sys, '_MEIPASS'):
@@ -43,14 +42,14 @@ def show_notification(title, message):
         icon=icon_path)
     toast.show()
 
-def fetch_p2p_data():
+def fetch_p2p_data(trade_type):
     url = "https://p2p.binance.com/bapi/c2c/v2/friendly/c2c/adv/search"
     headers = {'Content-Type': 'application/json'}
     payload = {
         "fiat": CURRENCY,
         "page": 1,
         "rows": 20,
-        "tradeType": TRADE_TYPE,
+        "tradeType": trade_type,
         "asset": ASSET,
         "countries": [],
         "proMerchantAds": False,
@@ -79,15 +78,23 @@ def fetch_p2p_data():
             "min": ad['adv']['minSingleTransAmount'],
             "max": ad['adv']['maxSingleTransAmount']
         } for ad in ads]
-        offers.sort(key=lambda x: x['price'], reverse=True)
+        offers.sort(key=lambda x: x['price'], reverse=(trade_type == "SELL"))
         return offers
 
     except Exception as e:
-        return [f"Error: {e}"]
+        return [{"error": str(e)}]
+        #return [f"Error: {e}"]
 
-def update_prices():
+def update_prices(tab):
+    listbox = tab['listbox']
+    entry = tab['entry']
+    notify_var = tab['notify_var']
+    status_label = tab['status_label']
+    trade_type = tab['type']
 
-    offers = fetch_p2p_data()
+    status_label.config(text="⏳ Refrescando...")
+    root.update_idletasks()
+    offers = fetch_p2p_data(trade_type)
     listbox.delete(0, tk.END)
 
     for offer in offers:
@@ -101,14 +108,14 @@ def update_prices():
         try:
             threshold = float(entry.get())
             top_price = offers[0]['price']
-            if top_price >= threshold:
-                show_notification( "¡Precio USDT alcanzado!",f"Precio actual: {top_price:.2f} BOB" )
+            if (trade_type == "SELL" and top_price >= threshold) or (trade_type == "BUY" and top_price <= threshold):
+                show_notification(f"¡Precio USDT ({trade_type})!", f"Precio actual: {top_price:.2f} BOB")
         except ValueError:
-            pass  
+            pass
 
     now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    root.title(f"Mejores Precios P2P - USDT to BOB (Binance - {now})")
-    root.after(15000, update_prices)
+    status_label.config(text=f"✅ Última actualización: {now}")
+    root.after(15000, lambda: update_prices(tab))
 
 create_shortcut_if_needed()
 
@@ -120,35 +127,59 @@ root.title("Mejores Precios P2P - USDT to BOB (Binance)")
 
 root.rowconfigure(1, weight=1)
 root.columnconfigure(0, weight=1)
+root.rowconfigure(2, weight=0)
 
-top_frame = tk.Frame(root)
-top_frame.grid(row=0, column=0, sticky="ew", padx=10, pady=5)
+notebook = ttk.Notebook(root)
+notebook.grid(row=1, column=0, sticky="nsew", padx=10, pady=(5, 0))
 
-tk.Label(top_frame, text="Avisarme si el precio ≥ ").pack(side=tk.LEFT)
-entry = tk.Entry(top_frame, width=10)
-entry.pack(side=tk.LEFT, padx=(5, 5))
-tk.Label(top_frame, text="BOB").pack(side=tk.LEFT)
 
-notify_var = tk.BooleanVar(value=False)
-notify_checkbox = tk.Checkbutton(top_frame, text="Activar notificación", variable=notify_var)
-notify_checkbox.pack(side=tk.LEFT, padx=(10, 0))
+def build_tab(tab_name, trade_type):
+    tab = tk.Frame(notebook)
+    notebook.add(tab, text=tab_name)
 
-frame = tk.Frame(root)
-frame.grid(row=1, column=0, sticky="nsew", padx=10, pady=5)
-frame.rowconfigure(0, weight=1)
-frame.columnconfigure(0, weight=1)
+    top_frame = tk.Frame(tab)
+    top_frame.grid(row=0, column=0, sticky="ew", padx=10, pady=5)
 
-listbox = tk.Listbox(frame, font=("Courier New", 14), width=115, height=15)
-listbox.grid(row=0, column=0, sticky="nsew")
+    tk.Label(top_frame, text="Avisarme si el precio " + ("≥" if trade_type == "SELL" else "≤")).pack(side=tk.LEFT)
+    entry = tk.Entry(top_frame, width=10)
+    entry.pack(side=tk.LEFT, padx=(5, 5))
+    tk.Label(top_frame, text="BOB").pack(side=tk.LEFT)
 
-scrollbar = tk.Scrollbar(frame, orient=tk.VERTICAL, command=listbox.yview)
-scrollbar.grid(row=0, column=1, sticky="ns")
-listbox.config(yscrollcommand=scrollbar.set)
+    notify_var = tk.BooleanVar(value=False)
+    notify_checkbox = tk.Checkbutton(top_frame, text="Activar notificación", variable=notify_var)
+    notify_checkbox.pack(side=tk.LEFT, padx=(10, 0))
 
-root.update_idletasks()
-root.geometry(f"{root.winfo_width()}x{root.winfo_height()}")
+    frame = tk.Frame(tab)
+    frame.grid(row=1, column=0, sticky="nsew", padx=10, pady=(0, 5))
+    frame.rowconfigure(0, weight=1)
+    frame.columnconfigure(0, weight=1)
 
-listbox.config(yscrollcommand=scrollbar.set)
+    listbox = tk.Listbox(frame, font=("Courier New", 14), width=115, height=15)
+    listbox.grid(row=0, column=0, sticky="nsew")
 
-update_prices()
+    scrollbar = tk.Scrollbar(frame, orient=tk.VERTICAL, command=listbox.yview)
+    scrollbar.grid(row=0, column=1, sticky="ns")
+    listbox.config(yscrollcommand=scrollbar.set)
+
+    status_label = tk.Label(tab, text="", fg="green", anchor="w", font=("Segoe UI", 10))
+    status_label.grid(row=2, column=0, sticky="ew", padx=10, pady=(0, 5))
+
+    tab_obj = {
+        "type": trade_type,
+        "listbox": listbox,
+        "entry": entry,
+        "notify_var": notify_var,
+        "status_label": status_label
+    }
+
+    refresh_button = tk.Button(top_frame, text="⟳ Refrescar ahora", command=lambda: update_prices(tab_obj))
+    refresh_button.pack(side=tk.RIGHT, padx=(10, 0))
+
+    # Disparar primer update al iniciar
+    root.after(1000, lambda: update_prices(tab_obj))
+    return tab_obj
+
+sell_tab = build_tab("VENDER USDT", "SELL")
+buy_tab = build_tab("COMPRAR USDT", "BUY")
+
 root.mainloop()
