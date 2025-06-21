@@ -175,7 +175,6 @@ def build_tab(tab_name, trade_type):
     refresh_button = tk.Button(top_frame, text="⟳ Refrescar ahora", command=lambda: update_prices(tab_obj))
     refresh_button.pack(side=tk.RIGHT, padx=(10, 0))
 
-    # Disparar primer update al iniciar
     root.after(1000, lambda: update_prices(tab_obj))
     return tab_obj
 
